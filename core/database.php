@@ -10,7 +10,11 @@ class DataBase {
     public function connect() {
         global $log;
         $this->conn = mysqli_init();
-        $this->conn->real_connect(settings::MYSQL_HOST, settings::MYSQL_USER, settings::MYSQL_PASS, settings::MYSQL_BASE, settings::MYSQL_PORT, NULL, MYSQLI_CLIENT_SSL);
+		/*if(!mysqli_real_connect($this->conn, settings::MYSQL_HOST, settings::MYSQL_USER, settings::MYSQL_PASS, settings::MYSQL_BASE, settings::MYSQL_PORT)) {
+			die('Ошибка подключения (' . mysqli_connect_errno() . ') '. mysqli_connect_error());
+		}*/
+		
+        $this->conn->real_connect(settings::MYSQL_HOST, settings::MYSQL_USER, settings::MYSQL_PASS, settings::MYSQL_BASE, settings::MYSQL_PORT);
         if (!mysqli_set_charset($this->conn, "utf8")) {
             $log->addMessage(mysqli_error($this->conn));
             die;

@@ -17,7 +17,8 @@ class Option {
         if(empty($option)) return false;
 
         $sql = "SELECT `id` FROM `tgstat_settings` WHERE `name` = '" . $DB->escapeString($option) . "' LIMIT 1";
-        if($result = $DB->query($sql)->fetch()) {
+		$res = $DB->query($sql);
+        if($result = $res->fetch()) {
             $fields = [
                 'value' => $value
             ];

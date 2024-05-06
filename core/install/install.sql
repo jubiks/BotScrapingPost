@@ -406,7 +406,7 @@ COLLATE utf8mb4_unicode_520_ci;
 CREATE TABLE IF NOT EXISTS tgstat_chat_subscribe (
   id bigint NOT NULL,
   chat_id bigint NOT NULL,
-  word text NOT NULL,
+  keyword text NOT NULL,
   event_types varchar(20) DEFAULT NULL,
   extended_syntax smallint DEFAULT 0,
   peer_types varchar(20) DEFAULT NULL,

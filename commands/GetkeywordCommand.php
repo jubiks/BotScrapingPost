@@ -16,22 +16,22 @@ use Longman\TelegramBot\Commands\UserCommand;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Exception\TelegramException;
 
-class SetkeywordCommand extends UserCommand
+class GetkeywordCommand extends UserCommand
 {
     /**
      * @var string
      */
-    protected $name = 'setkeyword';
+    protected $name = 'getkeyword';
 
     /**
      * @var string
      */
-    protected $description = 'Создает подписку на ключевую фразу (только для чатов)';
+    protected $description = 'Возвращает ключевую фразу (только для чата)';
 
     /**
      * @var string
      */
-    protected $usage = '/setkeyword <text> <parameters list>';
+    protected $usage = '/getkeyword';
 
     /**
      * @var string
@@ -57,7 +57,7 @@ class SetkeywordCommand extends UserCommand
         global $telegram;
 
         $message = $this->getMessage();
-        $text    = $message->getText(true);
+        //$text    = $message->getText(true);
 
         if(!(
             in_array($telegram->getChatMemberStatus($message->getChat()->getId(),$message->getFrom()->getId()),['creator','administrator'])
@@ -66,22 +66,10 @@ class SetkeywordCommand extends UserCommand
             return $this->replyToChat('Error: У вас недостаточно прав на выполнение команды');
         }
 
-        if ($text === '') {
-            return $this->replyToChat('Command usage: ' . $this->getUsage() . PHP_EOL . 'Use /help setkeyword to get a list of parameters');
+        if($keyword = \TgStatCallback::getKeywordByChatId($message->getChat()->getId())) {
+            return $this->replyToChat('Ключевая фраза: ' . $keyword);
         }
 
-        $fieldsChat = [
-            'id' => $message->getChat()->getId(),
-            'type' => $message->getChat()->getType(),
-            'title' => $message->getChat()->getTitle()
-        ];
-
-        \TgStatCallback::addChat($fieldsChat);
-
-        if(\TgStatCallback::addSubscribe($message->getChat()->getId(),$text)) {
-            return $this->replyToChat('Ключевая фраза успешно установлена: ' . $text);
-        }
-
-        return $this->replyToChat('Ошибка установки ключевой фразы');
+        return $this->replyToChat('Ключевая фраза не установлена');
     }
 }

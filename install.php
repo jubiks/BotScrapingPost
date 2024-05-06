@@ -1,4 +1,5 @@
 <?php
+
 require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/core/settings.php';
 require __DIR__ . '/core/log.php';
@@ -69,7 +70,7 @@ if($_REQUEST['token']) {
         $log->addMessage($e->getMessage());
         die($e->getMessage());
     } catch (Error $e) {
-        header('Content-Type: application/json; charset=utf-8');
+        //header('Content-Type: application/json; charset=utf-8');
         $log->addMessage($e->getMessage());
         die(print_r($e,true));
     }
@@ -84,7 +85,6 @@ if($_REQUEST['token']) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
 
-    <meta name="apple-itunes-app" content="app-id=686449807, app-argument: tg://privatepost?channel=2036123192&post=101">
     <script>window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement&&document.documentElement.classList&&document.documentElement.classList.add('theme_dark');</script>
     <link rel="icon" type="image/svg+xml" href="//telegram.org/img/website_icon.svg?4">
     <link rel="apple-touch-icon" sizes="180x180" href="//telegram.org/img/apple-touch-icon.png">

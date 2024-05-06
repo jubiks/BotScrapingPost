@@ -16,22 +16,22 @@ use Longman\TelegramBot\Commands\UserCommand;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Exception\TelegramException;
 
-class SetkeywordCommand extends UserCommand
+class SetpeertypeCommand extends UserCommand
 {
     /**
      * @var string
      */
-    protected $name = 'setkeyword';
+    protected $name = 'setpeertype';
 
     /**
      * @var string
      */
-    protected $description = 'Создает подписку на ключевую фразу (только для чатов)';
+    protected $description = 'Устанавливает тип источника (каналы или чаты, доступны значения: all (по умолчанию), chat (только чаты), channel (только каналы). Только для чатов)';
 
     /**
      * @var string
      */
-    protected $usage = '/setkeyword <text> <parameters list>';
+    protected $usage = '/setpeertype <type> (types: all , chat , channel)';
 
     /**
      * @var string
@@ -57,7 +57,7 @@ class SetkeywordCommand extends UserCommand
         global $telegram;
 
         $message = $this->getMessage();
-        $text    = $message->getText(true);
+        $type    = $message->getText(true);
 
         if(!(
             in_array($telegram->getChatMemberStatus($message->getChat()->getId(),$message->getFrom()->getId()),['creator','administrator'])
@@ -66,22 +66,18 @@ class SetkeywordCommand extends UserCommand
             return $this->replyToChat('Error: У вас недостаточно прав на выполнение команды');
         }
 
-        if ($text === '') {
-            return $this->replyToChat('Command usage: ' . $this->getUsage() . PHP_EOL . 'Use /help setkeyword to get a list of parameters');
+        if ($type === '' || !in_array($type,['all','chat','channel'])) {
+            return $this->replyToChat('Command usage: ' . $this->getUsage() . PHP_EOL);
         }
 
-        $fieldsChat = [
-            'id' => $message->getChat()->getId(),
-            'type' => $message->getChat()->getType(),
-            'title' => $message->getChat()->getTitle()
-        ];
-
-        \TgStatCallback::addChat($fieldsChat);
-
-        if(\TgStatCallback::addSubscribe($message->getChat()->getId(),$text)) {
-            return $this->replyToChat('Ключевая фраза успешно установлена: ' . $text);
+        if($subscribeId = \TgStatCallback::getSubscribeIdByChatId($message->getChat()->getId())) {
+            if($subscribeId && \TgStatCallback::setPeerTypeSubscribe($subscribeId, $type)){
+                return $this->replyToChat('Тип источника изменен');
+            }
+        }elseif(!$subscribeId) {
+            return $this->replyToChat('Ошибка изменения типа источника: ключевая фраза не установлена');
         }
 
-        return $this->replyToChat('Ошибка установки ключевой фразы');
+        return $this->replyToChat('Ошибка изменения типа источника');
     }
 }

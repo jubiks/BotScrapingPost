@@ -41,7 +41,7 @@ class SubscriptionlistCommand extends AdminCommand
     /**
      * @var bool
      */
-    protected $private_only = true;
+    protected $private_only = false;
 
     /**
      * Main command execution
@@ -58,9 +58,23 @@ class SubscriptionlistCommand extends AdminCommand
 
         $message = $this->getMessage();
         //$text    = $message->getText(true);
+        $isGroupChat = \TgStatCallback::isGroupChat($message->getChat()->getId());
 
-        if(!in_array($message->getFrom()->getId(),\settings::getBotAdmins())) {
-            return $this->replyToChat('Error: У вас недостаточно прав для выполнения команды');
+        if(!((
+            $isGroupChat
+            && in_array($telegram->getChatMemberStatus($message->getChat()->getId(),$message->getFrom()->getId()),['creator','administrator'])
+            && (\settings::isAdmin($message->getFrom()->getId()) || \settings::isEditor($message->getFrom()->getId()))
+        ) || (!$isGroupChat && \settings::isAdmin($message->getFrom()->getId()))
+        )) {
+            return $this->replyToChat('Error: У вас недостаточно прав на выполнение команды');
+        }
+
+        if($isGroupChat) {
+            if($subscribeId = \TgStatCallback::getSubscribeIdByChatId($message->getChat()->getId())) {
+                return $this->replyToChat(\TgStatCallback::getSubscriptionList($subscribeId));
+            } elseif(!$subscribeId) {
+                return $this->replyToChat('Ключевая фраза не установлена');
+            }
         }
 
         return $this->replyToChat(\TgStatCallback::getSubscriptionList());

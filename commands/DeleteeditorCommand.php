@@ -10,28 +10,28 @@
  * file that was distributed with this source code.
  */
 
-namespace Longman\TelegramBot\Commands\UserCommands;
+namespace Longman\TelegramBot\Commands\AdminCommands;
 
-use Longman\TelegramBot\Commands\UserCommand;
+use Longman\TelegramBot\Commands\AdminCommand;
 use Longman\TelegramBot\Entities\ServerResponse;
 use Longman\TelegramBot\Exception\TelegramException;
 
-class AddadminCommand extends UserCommand
+class DeleteeditorCommand extends AdminCommand
 {
     /**
      * @var string
      */
-    protected $name = 'addadmin';
+    protected $name = 'deleteeditor';
 
     /**
      * @var string
      */
-    protected $description = 'Добавление администратора для работы с чат-ботом';
+    protected $description = 'Удаляет редактора чата';
 
     /**
      * @var string
      */
-    protected $usage = '/addadmin <user_id>';
+    protected $usage = '/deleteeditor <user_id>';
 
     /**
      * @var string
@@ -59,18 +59,18 @@ class AddadminCommand extends UserCommand
         $message = $this->getMessage();
         $text    = $message->getText(true);
 
-        if(sizeof(\settings::getBotAdmins()) && !\settings::isAdmin($message->getFrom()->getId())) {
-            return $this->replyToChat('Error: У вас недостаточно прав для выполнения команды');
-        }
-
         if ($text === '') {
             return $this->replyToChat('Command usage: ' . $this->getUsage());
         }
 
-        if(\settings::addAdmin($text)) {
-            return $this->replyToChat('Администратор успешно добавлен');
+        if(!\settings::isAdmin($message->getFrom()->getId())) {
+            return $this->replyToChat('Error: У вас недостаточно прав для выполнения команды');
         }
 
-        return $this->replyToChat('Ошибка добавления администратора');
+        if(\settings::deleteEditor($text)) {
+            return $this->replyToChat('Редактор чата успешно удален');
+        }
+
+        return $this->replyToChat('Ошибка удаления редактора');
     }
 }

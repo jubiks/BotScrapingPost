@@ -121,10 +121,31 @@ class TgStatCallback {
         global $DB;
         $chatId = null;
         $sql = "SELECT `chat_id` FROM `tgstat_chat_subscribe` WHERE `id` = '" . $DB->escapeString($id) . "' LIMIT 1";
-        if($result = $DB->query($sql)->fetch()) {
-            $chatId = intval($result['chat_id']);
+        $res = $DB->query($sql);
+        if($result = $res->fetch()) {
+            $chatId = $result['chat_id'];
         }
         return $chatId;
+    }
+
+    public static function getSubscribeIdByChatId($id) {
+        global $DB;
+        $SubscribeId = null;
+        $sql = "SELECT `id` FROM `tgstat_chat_subscribe` WHERE `chat_id` = '" . $DB->escapeString($id) . "' LIMIT 1";
+        if($result = $DB->query($sql)->fetch()) {
+            $SubscribeId = intval($result['id']);
+        }
+        return $SubscribeId;
+    }
+
+    public static function getKeywordByChatId($id) {
+        global $DB;
+        $keyword = null;
+        $sql = "SELECT `keyword` FROM `tgstat_chat_subscribe` WHERE `chat_id` = '" . $DB->escapeString($id) . "' LIMIT 1";
+        if($result = $DB->query($sql)->fetch()) {
+            $keyword = $result['keyword'];
+        }
+        return $keyword;
     }
 
     public static function unsubscribeAll() {
@@ -169,6 +190,59 @@ class TgStatCallback {
         return false;
     }
 
+    public static function setPeerTypeSubscribe($subscribeId, $type) {
+        global $DB,$log;
+        if(!in_array($type,['all','chat','channel'])) return false;
+
+        $sql = "SELECT `keyword`,`event_types`,`extended_syntax` FROM `tgstat_chat_subscribe` WHERE `id` = '" . $DB->escapeString($subscribeId) . "' LIMIT 1";
+        if($result = $DB->query($sql)->fetch()) {
+            $url = 'https://api.tgstat.ru/callback/subscribe-word';
+
+            $negativeWords = [];
+            preg_match_all('/\s\-(\w+)/u', $result['keyword'], $matches, PREG_SET_ORDER, 0);
+            if(sizeof($matches)) {
+                foreach ($matches as $match) {
+                    $negativeWords[] = $match[1];
+                }
+            }
+
+            $fields = [
+                'token' => self::getToken(),
+                'subscription_id' => $subscribeId,
+                'q' => $result['keyword'],
+                'minus_words' => implode(' ', $negativeWords),
+                'event_types' => $result['event_types'],
+                'extended_syntax' => intval($result['extended_syntax']),
+                'peer_types' => $type
+            ];
+
+            $response = \Curl::send($url,$fields);
+            $log->addMessage($response);
+            $response = json_decode($response['body'],true);
+
+            if($response['status'] == 'ok') {
+                $fields = [
+                    'peer_types' => $type,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ];
+                $arSqlUpd = [];
+                foreach ($fields as $field => $value) {
+                    $value = is_int($value) ? $value : (empty($value) ? 'null' : "'" . $DB->escapeString($value) . "'");
+                    $arSqlUpd[] = "`$field` = $value";
+                }
+
+                if(count($arSqlUpd)) {
+                    $sql = "UPDATE `tgstat_chat_subscribe` SET " . implode(', ', $arSqlUpd) . " WHERE `id` = " . $subscribeId;
+                    $DB->query($sql);
+                }
+
+                return $subscribeId;
+            }
+        }
+
+        return false;
+    }
+
     public static function addSubscribe($chatId, $word) {
         global $DB,$log;
 
@@ -176,12 +250,20 @@ class TgStatCallback {
 
         $log->addMessage('Установка подписки на фразу: ' . $word);
 
-        $peerTypes = 'channel';
+        $peerTypes = 'all';
         $isExtendedSyntax = false;
 
         preg_match_all('/(\|)|(\=)|(\s?\-\S)|(\")|(\(|\))/m', $word, $matches, PREG_SET_ORDER, 0);
         if(sizeof($matches)) {
             $isExtendedSyntax = true;
+        }
+
+        $negativeWords = [];
+        preg_match_all('/\s\-(\w+)/u', $word, $matches, PREG_SET_ORDER, 0);
+        if(sizeof($matches)) {
+            foreach ($matches as $match) {
+                $negativeWords[] = $match[1];
+            }
         }
 
         $isNew = true;
@@ -195,6 +277,7 @@ class TgStatCallback {
         $fields = [
             'token' => self::getToken(),
             'q' => $word,
+            'minus_words' => implode(' ', $negativeWords),
             'event_types' => 'new_post',
             'extended_syntax' => intval($isExtendedSyntax),
             'peer_types' => $peerTypes
@@ -213,7 +296,7 @@ class TgStatCallback {
             $subscribeId = $response['response']['subscription_id'];
             if(!$isNew) {
                 $fields = [
-                    'word' => $word,
+                    'keyword' => $word,
                     'event_types' => 'new_post',
                     'extended_syntax' => intval($isExtendedSyntax),
                     'peer_types' => $peerTypes,
@@ -233,7 +316,7 @@ class TgStatCallback {
                 $fields = [
                     'id' => $subscribeId,
                     'chat_id' => $chatId,
-                    'word' => $word,
+                    'keyword' => $word,
                     'event_types' => 'new_post',
                     'extended_syntax' => intval($isExtendedSyntax),
                     'peer_types' => $peerTypes,
@@ -257,6 +340,19 @@ class TgStatCallback {
             }
 
             return $subscribeId;
+        }
+
+        return false;
+    }
+
+    public static function isGroupChat($id) {
+        global $DB;
+        $id = intval($id);
+        if(!$id) return false;
+
+        $sql = "SELECT EXISTS (SELECT `id` FROM `tgstat_chat` WHERE `id` = '".$DB->escapeString($id)."' LIMIT 1) AS `ISSET`";
+        if($DB->query($sql)->fetch()['ISSET']) {
+            return true;
         }
 
         return false;
@@ -335,7 +431,7 @@ class TgStatCallback {
         return $text;
     }
 
-    public static function getSubscriptionList() {
+    public static function getSubscriptionList($id = false) {
         $url = 'https://api.tgstat.ru/callback/subscriptions-list?token=' . self::getToken();
         $response = \Curl::send($url);
         $response = json_decode($response['body'],true);
@@ -343,6 +439,8 @@ class TgStatCallback {
         $text = "";
         if($response['status'] == 'ok') {
             foreach ($response['response']['subscriptions'] as $item) {
+                if($id && $id != $item['subscription_id']) continue;
+
                 $text .= "ID: " . $item['subscription_id'] . PHP_EOL;
                 $text .= "Типы событий: " . implode(', ', $item['event_types']) . PHP_EOL;
                 $text .= "Тип подписки: " . $item['type'] . PHP_EOL;

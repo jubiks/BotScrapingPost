@@ -46,12 +46,66 @@ class settings {
 
         return $return;
     }
-
-    public static function addAdmin($user_id) {
+	
+	public static function addAdmin($user_id) {
         global $DB;
         $sql = "INSERT IGNORE INTO `tgstat_admins`(`id`) VALUES(" . $DB->escapeString($user_id) . ")";
         $DB->query($sql,$error);
         if(!empty($error)) return false;
         return true;
+    }
+
+    public static function deleteAdmin($user_id) {
+        global $DB;
+        $sql = "DELETE FROM `tgstat_admins` WHERE `id` = '" . $DB->escapeString($user_id) . "'";
+        $DB->query($sql,$error);
+        if(!empty($error)) return false;
+        return true;
+    }
+
+    public static function isAdmin($user_id) {
+        global $DB;
+        $sql = "SELECT EXISTS (SELECT `id` FROM `tgstat_admins` WHERE `id` = '".$DB->escapeString($user_id)."' LIMIT 1) AS `ISSET`";
+        if($result = $DB->query($sql)->fetch()) {
+            return intval($result['ISSET']);
+        }
+        return false;
+    }
+
+    public static function getBotEditors() {
+        global $DB;
+        $return = [];
+        $sql = "SELECT `id` FROM `tgstat_editors`";
+        $res = $DB->query($sql);
+        while($result = $res->fetch()) {
+            $return[] = $result['id'];
+        }
+
+        return $return;
+    }
+
+    public static function addEditor($user_id) {
+        global $DB;
+        $sql = "INSERT IGNORE INTO `tgstat_editors`(`id`) VALUES(" . $DB->escapeString($user_id) . ")";
+        $DB->query($sql,$error);
+        if(!empty($error)) return false;
+        return true;
+    }
+
+    public static function deleteEditor($user_id) {
+        global $DB;
+        $sql = "DELETE FROM `tgstat_editors` WHERE `id` = '" . $DB->escapeString($user_id) . "'";
+        $DB->query($sql,$error);
+        if(!empty($error)) return false;
+        return true;
+    }
+
+    public static function isEditor($user_id) {
+        global $DB;
+        $sql = "SELECT EXISTS (SELECT `id` FROM `tgstat_editors` WHERE `id` = '".$DB->escapeString($user_id)."' LIMIT 1) AS `ISSET`";
+        if($result = $DB->query($sql)->fetch()) {
+            return intval($result['ISSET']);
+        }
+        return false;
     }
 }
