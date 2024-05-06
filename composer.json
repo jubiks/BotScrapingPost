@@ -1,0 +1,6 @@
+{
+    "require": {
+        "longman/telegram-bot": "^0.82.0",
+        "monolog/monolog": "^2.9"
+    }
+}
